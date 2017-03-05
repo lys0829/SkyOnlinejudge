@@ -6,7 +6,7 @@ if (!defined('IN_SKYOJSYSTEM')) {
 
 function loginHandle()
 {
-    global $_E,$_G;
+    global $_E,$_G,$_config;
     if( $_G['uid'] ) {
         \Render::ShowMessage('你不是登入了!?');
         exit(0);
