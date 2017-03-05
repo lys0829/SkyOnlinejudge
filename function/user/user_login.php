@@ -15,10 +15,19 @@ function loginHandle()
     $email = \SKYOJ\safe_post('email');
     $AESenpass = \SKYOJ\safe_post('password');
     $GB = \SKYOJ\safe_post('GB');
+	$user_ip = \SKYOJ\get_ip();
 
     if( isset($email,$AESenpass,$GB) ) {
         if (!\userControl::CheckToken('LOGIN')) {
             \SKYOJ\throwjson('error', 'token error, please refresh page');
+        }
+		
+		//ip check
+		$acctable = \DB::tname('account');
+		$res = \DB::fetchEx("SELECT `allow_ip` FROM `$acctable` WHERE `nickname`=?", $email);
+		if (ip2long($user_ip)!=ip2long($res['allow_ip']) && $res['allow_ip']!='%' && $_config['iplock']) {
+			
+            \SKYOJ\throwjson('error', 'this ip is not allowed to login');
         }
 
         //recover password
