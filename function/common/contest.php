@@ -407,7 +407,7 @@ class Contest extends CommonObject
         $table = \DB::tname('contest_problem');
         $probs = \DB::fetchAllEx("SELECT * FROM {$table} WHERE `cont_id`=? ORDER BY `priority` ASC",$this->cont_id());
         $uprobs = [];
-        if($_G['uid']){
+        if($_G['uid'] && $this->__get('randproblem')==1){
             if( !\userControl::isAdmin($_G['uid']) ){
                 $tuser = \DB::tname('contest_user');
                 $uprobs = \DB::fetchAllEx("SELECT `problems` FROM {$tuser} WHERE `cont_id`=? AND `uid`=?",$this->cont_id(),$_G['uid']);
@@ -446,6 +446,15 @@ class Contest extends CommonObject
         if( $probs===false )
         {
             throw new \Exception('contest get_all_problems_info() fail!');
+        }
+        if(count($uprobs)==0){
+            $all_pro = $probs;
+            $uprobs = [];
+            foreach($all_pro as $row){
+                if(!empty($row)){
+                    $uprobs[] = $row['pid'];
+                }
+            }
         }
         $data = [];
         foreach( $uprobs as $row )
