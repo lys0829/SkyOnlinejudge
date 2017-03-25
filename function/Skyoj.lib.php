@@ -93,7 +93,7 @@ function check_totimestamp($val,&$conv = null):bool
 function safe_post_int(string $key)
 {
     $data = safe_post($key);
-    if( !isset($data) || empty($data) )
+    if( !isset($data) )
     {
         return null;
     }
@@ -103,6 +103,27 @@ function safe_post_int(string $key)
         return null;
     }
     return (int)$data;
+}
+
+function safe_get_int(string $key)
+{
+    $data = safe_get($key);
+    if( !isset($data) )
+    {
+        return null;
+    }
+    if( !check_tocint($data) )
+    {
+        throw new \Exception('safe_get_int for ['.$key.'] failed!');
+        return null;
+    }
+    return (int)$data;
+}
+
+//TODO use ?int when upgrade to PHP7.1
+function get_timestamp(int $time):string
+{
+     return date('Y-m-d G:i:s',$time);
 }
 
 function CreateFolder(string $path,bool $rewrite = false,bool $recursive = false):bool

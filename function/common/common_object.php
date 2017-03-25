@@ -11,6 +11,19 @@ abstract class CommonObject{
     protected abstract function getTableName():string;
     protected abstract function getIDName():string;
 
+    protected $sqldata = [];
+
+    public function __get($name)
+    {
+        return $this->sqldata[$name]??null;
+    }
+
+    public function isIdfail()
+    {
+        $name = $this->getIDName();
+        return $this->$name <= 0;
+    }
+
     protected function UpdateSQLLazy(string $col = null,$val = null)
     {
         static $host = [];
@@ -19,7 +32,7 @@ abstract class CommonObject{
             $host = [];
             return $back;
         }
-        $this->SQLData[$col] = $val;
+        $this->sqldata[$col] = $val;
         $host[] = [$col,$val];
     }
 
