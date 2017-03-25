@@ -403,22 +403,74 @@ class Contest extends CommonObject
     //problem function
     function get_all_problems_info():array
     {
+        global $_G;
         $table = \DB::tname('contest_problem');
         $probs = \DB::fetchAllEx("SELECT * FROM {$table} WHERE `cont_id`=? ORDER BY `priority` ASC",$this->cont_id());
+        $uprobs = [];
+        if($_G['uid'] && $this->__get('randproblem')==1){
+            if( !\userControl::isAdmin($_G['uid']) ){
+                $tuser = \DB::tname('contest_user');
+                $uprobs = \DB::fetchAllEx("SELECT `problems` FROM {$tuser} WHERE `cont_id`=? AND `uid`=?",$this->cont_id(),$_G['uid']);
+                $maxp = 0;
+                //\Log::msg(\Level::Debug,'',$uprobs);
+                if($uprobs[0]['problems'] == ''){
+                    $rprobs = [];
+                    foreach($probs as $row){
+                        $rprobs[$row['priority']][] = $row['pid'];
+                        if($row['priority']>$maxp)$maxp = $row['priority'];
+                    }
+                    //\Log::msg(\Level::Debug,'',$rprobs);
+                    $uprobs = [];
+                    srand();
+                    for($i=1;$i<=$maxp;$i++){
+                        $uprobs[] = (int)$rprobs[$i][rand()%count($rprobs[$i])];
+                    }
+                    if(\DB::queryEx("UPDATE `{$tuser}` SET `problems`= ? WHERE `cont_id`=? AND `uid`=?",json_encode($uprobs),$this->cont_id(),$_G['uid']) === false){
+                        throw new \Exception('contest get_all_problems_info() fail!');
+                    }
+                }
+                else{
+                    $uprobs = json_decode($uprobs[0]['problems']);
+                }
+            }
+            else{
+                $all_pro = \DB::fetchAllEx("SELECT `pid` FROM {$table} WHERE `cont_id`=?",$this->cont_id());
+                $uprobs = [];
+                foreach($all_pro as $row){
+                    if(!empty($row)){
+                        $uprobs[] = $row['pid'];
+                    }
+                }
+            }
+        }
         if( $probs===false )
         {
             throw new \Exception('contest get_all_problems_info() fail!');
         }
+        if(count($uprobs)==0){
+            $all_pro = $probs;
+            $uprobs = [];
+            foreach($all_pro as $row){
+                if(!empty($row)){
+                    $uprobs[] = $row['pid'];
+                }
+            }
+        }
         $data = [];
-        foreach( $probs as $row )
+        foreach( $uprobs as $row )
         {
-            if(!ContestProblemStateEnum::allow($row['state'])){
+            $p = \DB::fetchAllEx("SELECT * FROM {$table} WHERE `cont_id`=? AND `pid`=?",$this->cont_id(),$row);
+            if($p===false){
+                throw new \Exception('contest get_all_problems_info() fail!');
+            }
+            $p = $p[0];
+            if(!ContestProblemStateEnum::allow($p['state'])){
                 continue;
             }
             $tmp = new ContestProblemInfo();
             foreach( ContestProblemInfo::$column as $c )
             {
-                $tmp->$c = $row[$c];
+                $tmp->$c = $p[$c];
             }
             $data[]=$tmp;
         }

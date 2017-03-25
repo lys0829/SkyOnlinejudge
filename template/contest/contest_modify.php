@@ -40,6 +40,7 @@ $(document).ready(function(){
         <div class="col-lg-10">
             <?php
                 $p = $tmpl['contest']->GetProblems();
+                //\Log::msg(\Level::Debug,'',$p);
                 Render::renderForm(new FormInfo([
                     'data'=>[
                         new HTML_INPUT_HIDDEN(['name'=>'cont_id','value'=>$tmpl['contest']->cont_id()]),
