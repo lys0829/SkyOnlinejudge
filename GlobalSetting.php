@@ -20,6 +20,9 @@ $_E['SITEPORT'] = '80';
 $_E['SITEDIR'] = '/';
 $_E['DATADIR'] = $_E['ROOT'].'/data/';
 
+//ip_lock
+$_E['iplock'] = 0;//input 1 or 0(true or false)
+
 $_E['language'] = 'zh-tw';
 //Site Setting
 $_E['site']['admin'] = [1];

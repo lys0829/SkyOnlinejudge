@@ -21,14 +21,6 @@ function loginHandle()
         if (!\userControl::CheckToken('LOGIN')) {
             \SKYOJ\throwjson('error', 'token error, please refresh page');
         }
-		
-		//ip check
-		$acctable = \DB::tname('account');
-		$res = \DB::fetchEx("SELECT `allow_ip` FROM `$acctable` WHERE `nickname`=?", $email);
-		if (ip2long($user_ip)!=ip2long($res['allow_ip']) && $res['allow_ip']!='%' && $_config['iplock']) {
-			
-            \SKYOJ\throwjson('error', 'this ip is not allowed to login');
-        }
 
         //recover password
         $exkey = unserialize($_SESSION['dhkey']);
@@ -38,7 +30,7 @@ function loginHandle()
         $decode = openssl_decrypt($AESenpass,'aes-256-cbc',$key,OPENSSL_ZERO_PADDING,$iv);
         $password = rtrim($decode, "\0");
 
-        $user = login($email, $password);
+        $user = login($email, $password, $user_ip);
         if (!$user[0]) {
             $_E['template']['alert'] = $user[1];
             \LOG::msg(\Level::Notice, "<$email> want to login but fail.(".$user[1].')');
