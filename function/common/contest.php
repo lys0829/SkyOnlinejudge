@@ -106,11 +106,13 @@ class ContestProblemInfo
 
 class ContestUserInfo
 {
-    static $column=['cont_id','uid','team_id','state'];
+    static $column=['cont_id','uid','team_id','state','timestamp','note'];
     public $cont_id;
     public $uid;
     public $team_id;
     public $state;
+    public $timestamp;
+    public $note;
 }
 
 class ScoreBlock
@@ -129,14 +131,6 @@ class UserBlock
     public $ac;
     public $ac_time;
     public $score;
-    static function acm_cmp($a,$b){
-        if( $a->ac!=$b->ac ) return $b->ac<=>$a->ac;
-        if( $a->ac_time!=$b->ac_time ) return $a->ac_time<=>$b->ac_time;
-        return $a->total_submit<=>$b->total_submit;
-    }
-    static function ioi_cmp($a,$b){
-        return $b->score <=> $a->score;
-    }
 }
 
 class ProblemBlock
@@ -230,9 +224,14 @@ class Contest extends CommonObject
         return $this->cont_id;
     }
 
-    function scoreboard_template():array
+    function scoreboard_template($resolver=false):array
     {
-        return $this->manger->scoreboard_template();
+        return $this->manger->scoreboard_template($resolver);
+    }
+    
+    function resolver_template():array
+    {
+        return $this->manger->resolver_template();
     }
 
     protected function set_title(string $title):bool
@@ -295,6 +294,15 @@ class Contest extends CommonObject
         return true;
     }
 
+    public function set_class(string $class):bool
+    {
+        $var = \Plugin::checkInstall($class);
+        if( !$var || !$var[$class] )
+            throw new CommonObjectError("set_class error",SKY_ERROR::NO_SUCH_DATA);
+        $this->UpdateSQLLazy('class',$class);
+        return true;
+    }
+
     //TODO: Rewrite this
     public function set_problems(string $problems):bool
     {
@@ -321,6 +329,20 @@ class Contest extends CommonObject
     function user_regstate(int $uid):int
     {
         return self::user_regstate_static($uid,$this->cont_id());
+    }
+
+    function get_user_info(int $uid):ContestUserInfo
+    {
+        $table = \DB::tname('contest_user');
+        $user = \DB::fetchEx("SELECT * FROM {$table} WHERE `cont_id`=? AND `uid`=?",$this->cont_id(),$uid);
+        if( $user === false )
+        {
+            throw new CommonObjectError('no such data',SKY_ERROR::NO_SUCH_DATA);
+        }
+        $tmp = new ContestUserInfo();
+        foreach( ContestUserInfo::$column as $c )
+            $tmp->$c = $user[$c];
+        return $tmp;
     }
 
     function get_all_users_info():array
@@ -442,6 +464,16 @@ class Contest extends CommonObject
         return $data;
     }
 
+    /**
+     *  get_user_problems_info
+     *  if manger have function get_user_problems_info ,this will return manger's value
+     *  else return all pid get from get_all_problems_info();
+     */
+    function get_user_problems_info(int $uid):array
+    {
+        return $this->manger->get_user_problems_info($this,$uid);
+    }
+
     //ScoreBoard
     public function get_chal_data_by_timestamp($start,$end):array
     {
@@ -463,6 +495,10 @@ class Contest extends CommonObject
 
     public function get_scoreboard_by_timestamp($start,$end)
     {
+        if( method_exists($this->manger,'get_scoreboard_by_timestamp') )
+        {
+            return $this->manger->get_scoreboard_by_timestamp($this,$start,$end);
+        }
         $all  = $this->get_chal_data_by_timestamp($start,$end);
         $uids = $this->get_all_users_info();
         $pids = $this->get_all_problems_info();
@@ -489,6 +525,7 @@ class Contest extends CommonObject
             foreach($pids as $row)
             {
                 $pid=$row->pid;
+                $ptag=$row->ptag;
                 $scoreboard[$uid][$pid]=new ScoreBlock();
                 $scoreboard[$uid][$pid]->try_times = 0;
                 $scoreboard[$uid][$pid]->is_ac     = 0;
@@ -512,6 +549,13 @@ class Contest extends CommonObject
         {
             $uid=$row['uid'];
             $pid=$row['pid'];
+            $ptag='';
+            foreach($pids as $p){
+                if($p->pid==$row['pid']){
+                    $ptag=$p->ptag;
+                    break;
+                }
+            }
             $verdict=$row['result'];
             $time=strtotime($row['timestamp'])-strtotime($this->starttime);
             if( $scoreboard[$uid][$pid]->is_ac != 0 )continue;
@@ -561,5 +605,77 @@ class Contest extends CommonObject
         $start = $this->starttime;
         $end   = $this->endtime;
         return $this->get_scoreboard_by_timestamp($start,$end);
+    }
+    
+    public function get_resolver()
+    {
+        $start = $this->starttime;
+        $end   = \SKYOJ\get_timestamp( max([ strtotime($start) , strtotime($this->endtime)-$this->freeze_sec ]) );
+        $scdata = $this->get_scoreboard_by_timestamp($start,$end);
+        return $this->to_resolver_json($scdata);
+    }
+
+    public function get_resolver_all()
+    {
+        $start = $this->starttime;
+        $end   = $this->endtime;
+        $scdata = $this->get_scoreboard_by_timestamp($start,$end);
+        return $this->to_resolver_json($scdata);
+    }
+    
+    public function to_resolver_json($scordboard_data)
+    {
+        if( method_exists($this->manger,'to_resolver_json') )
+        {
+            return $this->manger->to_resolver_json($this,$scordboard_data);
+        }
+        
+        //solved attempted
+        $json = [];
+        $json["solved"] = [];
+        $json["attempted"] = [];
+        foreach($scordboard_data['probleminfo'] as $prob)
+        {
+            $json["solved"][$prob->ptag] = $prob->ac_times;
+            $json["attempted"][$prob->ptag] = $prob->try_times;
+        }
+        $rank = 1;
+        $last = null;
+        $json["scoreboard"] = [];
+        foreach($scordboard_data['userinfo'] as $user)
+        {
+            if( isset($last)&&$this->rank_cmp($last,$user)!=0 ){
+                $rank++;
+            }
+            $last = $user;
+            $d = [];
+            $d['id'] = (int)$user->uid;
+            $d['rank'] = $rank;
+            $d['solved'] = (int)$user->ac;
+            $d['points'] = (int)$user->ac_time;
+
+            $nickname=\SKYOJ\nickname($user->uid);
+            $d['name'] = $nickname[$user->uid];
+            $d['group'] = '';
+
+            foreach($scordboard_data['probleminfo'] as $prob)
+            {
+                $sb=$scordboard_data['scoreboard'][$user->uid][$prob->pid];
+                $d[$prob->ptag] = [];
+                $d[$prob->ptag]['a'] = $sb->try_times;
+                if( $sb->is_ac )
+                {
+                    $d[$prob->ptag]['t'] = $sb->ac_time;
+                }
+                if( $sb->firstblood )$d[$prob->ptag]['s'] = "first";
+                else if( $sb->is_ac )$d[$prob->ptag]['s'] = "solved";
+                else if( $sb->try_times ) $d[$prob->ptag]['s'] = "tried";
+                else $d[$prob->ptag]['s'] = "nottried";
+            }
+
+            $json["scoreboard"][] = $d;
+            
+        }
+        return json_encode($json);
     }
 }

@@ -3,7 +3,7 @@ if (!defined('IN_SKYOJSYSTEM')) {
     exit('Access denied');
 }
 
-function scoreboardHandle()
+function scoreboard_resolverHandle()
 {
     global $SkyOJ,$_E,$_G;
     
@@ -19,16 +19,12 @@ function scoreboardHandle()
         $_E['template']['user'] = $data['userinfo'];
         $_E['template']['pids'] = $data['probleminfo'];
         $_E['template']['scoreboard'] = $data['scoreboard'];
-        $tmpl = $contest->scoreboard_template(true);
-        if(isset($tmpl[2])){
-            if($tmpl[2]=='resolver'){
-                \Render::renderSingleTemplate('common_header');
-                \Render::renderSingleTemplate($tmpl[0],$tmpl[1]);
-            }
-        }
-        else{
-            \Render::render($tmpl[0],$tmpl[1]);
-        }
+        \Render::renderSingleTemplate('common_header');
+        if( $contest->class == "ioi" )
+            \Render::renderSingleTemplate('view_scoreboard_resolver_ioi','contest');
+        else
+            \Render::renderSingleTemplate('view_scoreboard_resolver_acm','contest');
+        exit(0);
     }catch(\Exception $e){
         \Render::errormessage('Oops! '.$e->getMessage(),'Contest');
         \Render::render('nonedefine');

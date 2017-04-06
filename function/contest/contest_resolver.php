@@ -19,7 +19,8 @@ function resolverHandle()
         $_E['template']['contest'] = $contest;
         //bangkok_resolver will destory page design
         \Render::renderSingleTemplate('common_header');
-        \Render::renderSingleTemplate('bangkok_resolver','contest');
+        $tmpl = $contest->resolver_template();
+        \Render::renderSingleTemplate($tmpl[0],$tmpl[1]);
     }catch(\Exception $e){
         \Render::errormessage('Oops! '.$e->getMessage(),'Contest');
         \Render::render('nonedefine');
