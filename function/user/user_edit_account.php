@@ -19,8 +19,8 @@ function edit_accountHandle(UserInfo $userInfo)
     }
 
     //Change Old Password    
-    if (isset($newpass)) {
-        if (!CheckPasswordFormat($newpass) && $newpass!='') {
+    if (!empty($newpass)) {
+        if (!CheckPasswordFormat($newpass)) {
             \SKYOJ\throwjson('error', 'Password format error!');
         }
         $data['passhash'] = GetPasswordHash($newpass);
