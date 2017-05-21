@@ -12,6 +12,7 @@ function edit_accountHandle(UserInfo $userInfo)
     $newpass  =\SKYOJ\safe_post('newpasswd');
     $realname =\SKYOJ\safe_post('realname');
     $nickname =\SKYOJ\safe_post('nickname');
+    $ip = \SKYOJ\safe_post('ip');
 
     $data = $userInfo->load_data('account');
     
@@ -45,6 +46,15 @@ function edit_accountHandle(UserInfo $userInfo)
             \SKYOJ\throwjson('error', 'Nickname 重複');
         }
         $data['nickname'] = $nickname;
+    }
+
+    if( isset($ip) ){
+        if($ip != ''){
+            $data['allow_ip'] = $ip;
+        }
+        else{
+            $data['allow_ip'] = '%';
+        }
     }
 
     if ( !$userInfo->save_data('account', $data) ) {

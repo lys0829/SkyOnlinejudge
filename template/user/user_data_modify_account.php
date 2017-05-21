@@ -74,6 +74,9 @@ $(document).ready(function()
                         new HTML_ROW(['html' => '<h3>修改名稱</h3>']),
                         new HTML_INPUT_TEXT(  ['name' => 'nickname','id'=>  'nickname','option' => ['help_text' => '暱稱']]),
                         new HTML_INPUT_TEXT(  ['name' => 'realname','option' => ['help_text' => '真實姓名']]),
+
+                        new HTML_ROW(['html' => '<h3>限制登入IP</h3>']),
+                        new HTML_INPUT_TEXT(  ['name' => 'ip','value' => $_E['template']['acct']['allow_ip'],'option' => ['help_text' => '登入IP(若不限制則留空)']]),
                         
                         new HTML_INPUT_BUTTOM(['name'=>'btn','title'=>'送出','option' => ['help_text' => 'true']]),
                     ],
