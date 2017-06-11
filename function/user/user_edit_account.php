@@ -37,11 +37,13 @@ function edit_accountHandle(UserInfo $userInfo)
     }
 
     if( isset($ip) ){
-        if($ip != ''){
-            $data['allow_ip'] = $ip;
-        }
-        else{
-            $data['allow_ip'] = '%';
+        if(\userControl::isAdmin($_G['uid'])){
+            if($ip != ''){
+                $data['allow_ip'] = $ip;
+            }
+            else{
+                $data['allow_ip'] = '%';
+            }
         }
     }
 
